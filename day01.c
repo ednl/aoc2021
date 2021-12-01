@@ -3,11 +3,11 @@
 #define N 2000
 static int depth[N] = {0};
 
-static int increased(int window)
+static int inc(int win)
 {
     int n = 0;
-    for (int i = window; i < N; ++i)
-        n += depth[i] > depth[i - window];
+    for (int i = win; i < N; ++i)
+        n += depth[i] > depth[i - win];
     return n;
 }
 
@@ -24,7 +24,7 @@ int main(void)
     if (i != N)
         return 2;
 
-    printf("Part 1: %d\n", increased(1));
-    printf("Part 2: %d\n", increased(3));
+    printf("Part 1: %d\n", inc(1));
+    printf("Part 2: %d\n", inc(3));
     return 0;
 }
