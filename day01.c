@@ -1,36 +1,22 @@
 #include <stdio.h>
 #include <limits.h>
 
-#define N 2000
-static int depth[N] = {0};
+#define N 4
+static int d[N] = {INT_MAX, INT_MAX, INT_MAX, INT_MAX};
 
 int main(void)
 {
     FILE *f = fopen("input01.txt", "r");
-    if (!f) {
-        return 1;
-    }
-
-    int n = 0, d;
-    while (n < N && fscanf(f, "%d ", &d) == 1) {
-        depth[n++] = d;
+    int a = 0, b = 0, i = 0, j = N - 1, k = 1;
+    while (fscanf(f, "%d ", &d[i]) == 1) {
+        a += d[i] > d[j];
+        b += d[i] > d[k];
+        i = (i + 1) % N;
+        j = (j + 1) % N;
+        k = (k + 1) % N;
     }
     fclose(f);
-    if (n != N) {
-        return 2;
-    }
-
-    int inc = 0;
-    for (int i = 1; i < N; ++i) {
-        inc += depth[i] > depth[i - 1];
-    }
-    printf("Part 1: %d\n", inc);
-
-    inc = 0;
-    for (int i = 3; i < N; ++i) {
-        inc += depth[i] > depth[i - 3];
-    }
-    printf("Part 2: %d\n", inc);
-
+    printf("Part 1: %d\n", a);
+    printf("Part 2: %d\n", b);
     return 0;
 }
