@@ -11,7 +11,7 @@ int main(void)
     while (fscanf(f, "%d ", &d[i]) == 1) {
         a += d[i] > d[j];
         b += d[i] > d[k];
-        i = (i + 1) % N;
+        i = k;
         j = (j + 1) % N;
         k = (k + 1) % N;
     }
