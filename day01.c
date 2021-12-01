@@ -1,22 +1,23 @@
 #include <stdio.h>
-#include <limits.h>
 
-#define N 4
-static int d[N] = {INT_MAX, INT_MAX, INT_MAX, INT_MAX};
+#define N 2000
+static int depth[N] = {0};
+
+static int increased(int window)
+{
+    int n = 0;
+    for (int i = window; i < N; ++i)
+        n += depth[i] > depth[i - window];
+    return n;
+}
 
 int main(void)
 {
+    int i = 0;
     FILE *f = fopen("input01.txt", "r");
-    int a = 0, b = 0, i = 0, j = N - 1, k = 1;
-    while (fscanf(f, "%d ", &d[i]) == 1) {
-        a += d[i] > d[j];
-        b += d[i] > d[k];
-        i = k;
-        j = (j + 1) % N;
-        k = (k + 1) % N;
-    }
+    while (fscanf(f, "%d ", &depth[i++]) == 1);
     fclose(f);
-    printf("Part 1: %d\n", a);
-    printf("Part 2: %d\n", b);
+    printf("Part 1: %d\n", increased(1));
+    printf("Part 2: %d\n", increased(3));
     return 0;
 }
