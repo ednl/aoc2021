@@ -12,16 +12,16 @@ int main(void)
     if (!f)
         return 1;
 
-    int c0, c, n = 0, i;
-    while (n < N && !feof(f)) {
-        c0 = c = fgetc(f);
+    int i = 0, c, dir, val;
+    while (i < N && !feof(f)) {
+        dir = c = fgetc(f);
         while (c >= 'a')
             c = fgetc(f);
-        if (fscanf(f, "%d ", &i) == 1)
-            nav[n++] = (Nav){c0, i};
+        if (fscanf(f, "%d ", &val) == 1)
+            nav[i++] = (Nav){dir, val};
     }
     fclose(f);
-    if (n != N)
+    if (i != N)
         return 2;
 
     int fwd = 0, depth = 0;
