@@ -2,7 +2,7 @@
 
 #define N 1000
 typedef struct {
-    int dir, val;
+    int cmd, arg;
 } Nav;
 static Nav nav[N] = {0};
 
@@ -12,13 +12,10 @@ int main(void)
     if (!f)
         return 1;
 
-    int i = 0, c, dir, val;
-    while (i < N && !feof(f)) {
-        dir = c = fgetc(f);
-        while (c >= 'a')
-            c = fgetc(f);
-        if (fscanf(f, "%d ", &val) == 1)
-            nav[i++] = (Nav){dir, val};
+    int i = 0, arg;
+    char cmd[10];
+    while (i < N && fscanf(f, "%9s %d ", cmd, &arg) == 2) {
+        nav[i++] = (Nav){cmd[0], arg};
     }
     fclose(f);
     if (i != N)
@@ -26,10 +23,10 @@ int main(void)
 
     int fwd = 0, depth = 0;
     for (i = 0; i < N; ++i) {
-        switch (nav[i].dir) {
-            case 'f': fwd += nav[i].val; break;
-            case 'd': depth += nav[i].val; break;
-            case 'u': depth -= nav[i].val; break;
+        switch (nav[i].cmd) {
+            case 'f': fwd += nav[i].arg; break;
+            case 'd': depth += nav[i].arg; break;
+            case 'u': depth -= nav[i].arg; break;
         }
     }
     printf("Part 1: %d\n", fwd * depth);
@@ -37,10 +34,10 @@ int main(void)
     fwd = depth = 0;
     int aim = 0;
     for (i = 0; i < N; ++i) {
-        switch (nav[i].dir) {
-            case 'f': fwd += nav[i].val; depth += aim * nav[i].val; break;
-            case 'd': aim += nav[i].val; break;
-            case 'u': aim -= nav[i].val; break;
+        switch (nav[i].cmd) {
+            case 'f': fwd += nav[i].arg; depth += aim * nav[i].arg; break;
+            case 'd': aim += nav[i].arg; break;
+            case 'u': aim -= nav[i].arg; break;
         }
     }
     printf("Part 2: %d\n", fwd * depth);
