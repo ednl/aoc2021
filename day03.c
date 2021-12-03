@@ -1,13 +1,9 @@
 #include <stdio.h>
 
-#define N 1000
-#define L 12
-#define W "12"
+#define N 1000  // lines in input file
+#define W 12    // word size (12-bit numbers)
 
-// typedef struct {
-//     int cmd, arg;
-// } Nav;
-// static Nav nav[N] = {0};
+static unsigned int data[N] = {0};
 
 int main(void)
 {
@@ -15,29 +11,48 @@ int main(void)
     if (!f)
         return 1;
 
-    unsigned int i = 0, j, bin[L] = {0};
-    char word[L + 1];
-    while (i < N && fscanf(f, "%"W"s ", word) == 1) {
-        for (j = 0; j < L; ++j) {
-            bin[j] += word[j] == '1';
+    unsigned int i = 0, j, k;
+    while (i < N) {
+        k = 0;
+        for (j = 0; j < W; ++j) {
+            k = (k << 1) | (fgetc(f) == '1');
         }
-        ++i;
+        data[i++] = k;
+        fgetc(f); // newline
     }
     fclose(f);
     if (i != N)
         return 2;
 
-    for (i = 0; i < L; ++i) {
-        printf("%4u", bin[i]);
+    unsigned int hist[W] = {0};
+    for (i = 0; i < N; ++i) {
+        k = 1 << W;
+        for (j = 0; j < W; ++j) {
+            k >>= 1;
+            hist[j] += (data[i] & k) != 0;
+        }
     }
-    printf("\n");
 
-    unsigned int threshold = N >> 1, gamma = 0;
-    for (i = 0; i < L; ++i) {
+    unsigned int half = N >> 1, gamma = 0;
+    for (i = 0; i < W; ++i) {
         gamma <<= 1;
-        gamma |= (bin[i] > threshold);
+        gamma |= (hist[i] > half);
     }
-    unsigned int epsilon = gamma ^ ((1 << L) - 1);
+    unsigned int epsilon = gamma ^ ((1 << W) - 1);  // flip "W" LSBs in gamma
     printf("Part 1: %u\n", gamma * epsilon);
+
+    k = 1 << W;
+    for (j = 0; j < W; ++j) {
+        k >>= 1;
+        unsigned int remain = N;
+        while (k && remain > 1) {
+            //
+            for (i = 0; i < N; ++i) {
+                //
+            }
+            //
+        }
+    }
+
     return 0;
 }
