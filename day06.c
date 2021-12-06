@@ -32,14 +32,14 @@ static double timer(void)
 // Live for days, return population
 static uint64_t live(const int days)
 {
-    static int day = 0;  // remember the day
-    for (; day < days; ++day)
-        age[(day + CYCLE) % LIFE] += age[day % LIFE];  // start new spawn cycle
-        // Leaving current age bin untouched = each fishie gets one kiddo
+    static int day = 0, i = 0, j = CYCLE;
+    for (; day < days; ++day, ++i == LIFE && (i = 0), ++j == LIFE && (j = 0))
+        age[j] += age[i];  // start new spawn cycle
+        // Leaving current bin age[i] untouched = each fishie produces one kiddo
 
     uint64_t pop = 0;
-    for (int i = 0; i < LIFE; ++i)
-        pop += age[i];
+    for (int k = 0; k < LIFE; ++k)
+        pop += age[k];
     return pop;
 }
 
@@ -58,6 +58,6 @@ int main(void)
 
     printf("Part 1: %llu\n", live(DAYS1));  // 374927
     printf("Part 2: %llu\n", live(DAYS2));  // 1687617803407
-    printf("Time: %.6f s\n", timer());
+    printf("Time: %.9f s\n", timer());
     return 0;
 }
