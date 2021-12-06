@@ -7,12 +7,12 @@
 #define DAYS1  80  // part 1
 #define DAYS2 256  // part 2
 
-// Population histogram per age (mod 9)
+// Population histogram per age mod 9
 static uint64_t pop[LIFE] = {0};
 
 // Live for X days, return total population
-// birth = histogram index of lantern fish that are
-//         about to give birth (countdown = 0)
+// birth = histogram index (= age mod 9) of lantern fish
+//         that are about to give birth (countdown = 0)
 // Birth index advances every day <=> countdown to next birth
 static uint64_t live(int birth, int days)
 {
