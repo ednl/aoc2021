@@ -10,17 +10,13 @@
 // Histogram of fish population count per age mod 9
 static uint64_t age[LIFE] = {0};
 
-// Live for X days, return total population
+// Live for days, return population
 static uint64_t live(const int days)
 {
-    // Remember day where day % LIFE = age index for spawn countdown 0
-    static int day = 0;
+    static int day = 0;  // remember the day
     for (; day < days; ++day)
-        // On each new day, fish on countdown 0 start a new spawn cycle
-        age[(day + CYCLE) % LIFE] += age[day % LIFE];
-        // Leaving the population of the current index untouched means:
-        //   removing them from this bin and adding their offspring
-        //   to bin+LIFE (= the next bin-1) is net zero effect
+        age[(day + CYCLE) % LIFE] += age[day % LIFE];  // start new spawn cycle
+        // Leaving current age bin untouched = each fishie gets one kiddo
 
     uint64_t pop = 0;
     for (int i = 0; i < LIFE; ++i)
@@ -31,7 +27,6 @@ static uint64_t live(const int days)
 int main(void)
 {
     // Build population histogram by age bin
-    // by reading single-digit ages from CSV
     FILE *f = fopen("input06.txt", "r");
     int c = ',';
     while (c == ',') {
