@@ -11,7 +11,7 @@
 static uint64_t age[LIFE] = {0};
 
 // Live for X days, return total population
-static uint64_t live(int days)
+static uint64_t live(const int days)
 {
     // Remember day where day % LIFE = age index for spawn countdown 0
     static int day = 0;
