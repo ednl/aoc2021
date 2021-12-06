@@ -18,11 +18,11 @@ static uint64_t pop[LIFE] = {0};
 static uint64_t live(int spawn, int days)
 {
     for (int i = spawn; i < spawn + days; ++i)
-        // Everyone whose birth countdown is 0 starts a new cycle
+        // Every fish whose spawn countdown is 0 starts a new cycle
         pop[(i + CYCLE) % LIFE] += pop[i % LIFE];
-        // Leaving the population of this index untouched means:
-        // removing them from this bin and adding their offspring
-        // to (what is the next) bin-1 = net zero effect
+        // Leaving the population of the current index untouched means:
+        //   removing them from this bin and adding their offspring
+        //   to bin+LIFE (the next bin-1) = net zero effect
 
     uint64_t count = 0;
     for (int i = 0; i < LIFE; ++i)
