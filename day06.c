@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#define CYCLE   7  // give birth every 7 days
-#define DELAY   2  // add 2 days to the first birth cycle
-#define LIFE (CYCLE + DELAY)  // the whole circle
+#define CYCLE   7  // spawn every 7 days
+#define DELAY   2  // add 2 days to the first spawn cycle
+#define LIFE (CYCLE + DELAY)  // the whole circle of life
 #define DAYS1  80  // part 1
 #define DAYS2 256  // part 2
 
@@ -11,22 +11,23 @@
 static uint64_t pop[LIFE] = {0};
 
 // Live for X days, return total population
-// birth = histogram index (= age mod 9) of lantern fish
-//         that are about to give birth (countdown = 0)
-// Birth index advances every day <=> countdown to next birth
-static uint64_t live(int birth, int days)
+// spawn = histogram index (= age mod 9) of lantern fish
+//         that are about to spawn (= countdown 0)
+// Advance countdown to next spawn by increasing the index every day
+// Return total population count
+static uint64_t live(int spawn, int days)
 {
-    for (int i = birth; i < birth + days; ++i)
+    for (int i = spawn; i < spawn + days; ++i)
         // Everyone whose birth countdown is 0 starts a new cycle
         pop[(i + CYCLE) % LIFE] += pop[i % LIFE];
         // Leaving the population of this index untouched means:
         // removing them from this bin and adding their offspring
         // to (what is the next) bin-1 = net zero effect
 
-    uint64_t census = 0;
+    uint64_t count = 0;
     for (int i = 0; i < LIFE; ++i)
-        census += pop[i];
-    return census;
+        count += pop[i];
+    return count;
 }
 
 int main(void)
