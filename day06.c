@@ -15,7 +15,7 @@ static uint64_t live(int days)
 {
     // Remember day where day % LIFE = age index for spawn countdown 0
     static int day = 0;
-    for (; day < days; ++days)
+    for (; day < days; ++day)
         // On each new day, fish on countdown 0 start a new spawn cycle
         age[(day + CYCLE) % LIFE] += age[day % LIFE];
         // Leaving the population of the current index untouched means:
