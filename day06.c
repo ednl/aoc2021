@@ -7,26 +7,24 @@
 #define DAYS1  80  // part 1
 #define DAYS2 256  // part 2
 
-// Population histogram per age mod 9
-static uint64_t pop[LIFE] = {0};
+// Histogram of fish population count per age mod 9
+static uint64_t age[LIFE] = {0};
 
 // Live for X days, return total population
-// spawn = histogram index (= age mod 9) of lantern fish
-//         that are about to spawn (= countdown 0)
-// Advance countdown to next spawn by increasing the index every day
-// Return total population count
-static uint64_t live(int spawn, int days)
+static uint64_t live(int days)
 {
-    for (int i = spawn; i < spawn + days; ++i)
-        // Every fish whose spawn countdown is 0 starts a new cycle
-        pop[(i + CYCLE) % LIFE] += pop[i % LIFE];
+    // Remember day where day % LIFE = age index for spawn countdown 0
+    static int day = 0;
+    for (; day < days; ++days)
+        // On each new day, fish on countdown 0 start a new spawn cycle
+        age[(day + CYCLE) % LIFE] += age[day % LIFE];
         // Leaving the population of the current index untouched means:
         //   removing them from this bin and adding their offspring
-        //   to bin+LIFE (the next bin-1) = net zero effect
+        //   to bin+LIFE (= the next bin-1) is net zero effect
 
     uint64_t count = 0;
     for (int i = 0; i < LIFE; ++i)
-        count += pop[i];
+        count += age[i];
     return count;
 }
 
@@ -37,12 +35,12 @@ int main(void)
     FILE *f = fopen("input06.txt", "r");
     int c = ',';
     while (c == ',') {
-        pop[fgetc(f) - '0']++;
+        age[fgetc(f) - '0']++;
         c = fgetc(f);
     }
     fclose(f);
 
-    printf("Part 1: %llu\n", live(0, DAYS1));
-    printf("Part 2: %llu\n", live(DAYS1 % LIFE, DAYS2 - DAYS1));
+    printf("Part 1: %llu\n", live(DAYS1));  // 374927
+    printf("Part 2: %llu\n", live(DAYS2));  // 1687617803407
     return 0;
 }
