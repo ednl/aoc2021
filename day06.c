@@ -22,10 +22,10 @@ static uint64_t live(int days)
         //   removing them from this bin and adding their offspring
         //   to bin+LIFE (= the next bin-1) is net zero effect
 
-    uint64_t count = 0;
+    uint64_t pop = 0;
     for (int i = 0; i < LIFE; ++i)
-        count += age[i];
-    return count;
+        pop += age[i];
+    return pop;
 }
 
 int main(void)
