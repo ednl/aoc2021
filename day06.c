@@ -12,7 +12,7 @@
 // Histogram of fish population count per age mod 9
 static uint64_t age[LIFE] = {0};
 
-static double timer(void)
+static uint64_t nanotimer(void)
 {
     static bool start = true;
     static struct timespec t0;
@@ -25,7 +25,7 @@ static double timer(void)
         struct timespec t1;
         clock_gettime(CLOCK_MONOTONIC_RAW, &t1);
         start = true;
-        return 1.0 * t1.tv_sec + 1e-9 * t1.tv_nsec - (1.0 * t0.tv_sec + 1e-9 * t0.tv_nsec);
+        return (uint64_t)(t1.tv_sec - t0.tv_sec) * UINT64_C(1000000000) + (uint64_t)t1.tv_nsec - (uint64_t)t0.tv_nsec;
     }
 }
 
@@ -45,7 +45,7 @@ static uint64_t live(const int days)
 
 int main(void)
 {
-    timer();
+    nanotimer();
 
     // Build population histogram by age bin
     FILE *f = fopen("input06.txt", "r");
@@ -58,6 +58,6 @@ int main(void)
 
     printf("Part 1: %llu\n", live(DAYS1));  // 374927
     printf("Part 2: %llu\n", live(DAYS2));  // 1687617803407
-    printf("Time: %.9f s\n", timer());
+    printf("%.9f s\n", nanotimer() * 1e-9);
     return 0;
 }
