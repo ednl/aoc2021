@@ -45,6 +45,10 @@ static int cost2(const int target)
     for (int i = 0; i < N; ++i) {
         int r = abs(data[i] - target), r2 = r >> 1;
         cost += (r & 1) ? r2 * r + r : r2 * r + r2;
+        // Ore more clear and how the formula from Gauss is known
+        // but ever so slightly slower, for some reason:
+        // int n = abs(data[i] - target);
+        // cost += n * (n + 1) / 2;
     }
     return cost;
 }
