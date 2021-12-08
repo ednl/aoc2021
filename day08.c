@@ -1,23 +1,26 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 
-#define N 200
-#define IN 10
-#define OUT 4
-#define L   7
-static char inp[N][IN ][L + 1] = {0};
-static char out[N][OUT][L + 1] = {0};
-static bool possib[L][L] = {0};
-static char pcount[L] = {0};
-static char wire[L] = {0};
+#define N 200  // lines
+#define M  14  // digits per line
+#define L   7  // segments per digit
 
-static int cmp(const void *a, const void *b)
+static char seg[N][M][L + 1] = {0};
+static size_t len[N][M] = {0};  // avoid calling strlen every time
+
+// Does A contain B? (unsorted so has to check the whole range every time)
+static bool contains(const char *a, const char *b)
 {
-    char p = *(const char*)a;
-    char q = *(const char*)b;
-    return (q < p) - (p < q);
+    while (*b) {
+        const char *c = a;
+        while (*c && *c != *b)
+            c++;
+        if (!*c)
+            return false;
+        b++;
+    }
+    return true;
 }
 
 int main(void)
@@ -26,136 +29,71 @@ int main(void)
     FILE *f = fopen("input08.txt", "r");
     for (int i = 0; i < N &&
         fscanf(f, "%7s %7s %7s %7s %7s %7s %7s %7s %7s %7s | %7s %7s %7s %7s ",
-            inp[i][0], inp[i][1], inp[i][2], inp[i][3], inp[i][4], inp[i][5], inp[i][6], inp[i][7], inp[i][8], inp[i][9],
-            out[i][0], out[i][1], out[i][2], out[i][3]) == 14; ++i) {
-        for (int j = 0; j < OUT; ++j) {
-            size_t k = strlen(out[i][j]);
-            if (k == 2 || k == 4 || k == 3 || k == 7)
+            seg[i][0], seg[i][1], seg[i][2], seg[i][3], seg[i][4], seg[i][5], seg[i][6], seg[i][7], seg[i][8], seg[i][9],
+            seg[i][10], seg[i][11], seg[i][12], seg[i][13]) == 14; ++i) {
+        for (int j = 0; j < M; ++j)
+            len[i][j] = strlen(seg[i][j]);
+        for (int j = 10; j < M; ++j) {
+            if ((len[i][j] >= 2 && len[i][j] <= 4) || len[i][j] == 7)
                 ++ans;
         }
     }
     fclose(f);
-    printf("Part 1: %d\n", ans);
+    printf("Part 1: %d\n", ans);  // 534
 
-    // num:  000000   111111   222222   333333   444444   555555   666666   777777   888888   999999
-    //
-    //        aaaa              aaaa     aaaa              aaaa     aaaa     aaaa     aaaa     aaaa
-    //       b    c        c        c        c   b    c   b        b             c   b    c   b    c
-    //       b    c        c        c        c   b    c   b        b             c   b    c   b    c
-    //                          dddd     dddd     dddd     dddd     dddd              dddd     dddd
-    //       e    f        f   e             f        f        f   e    f        f   e    f        f
-    //       e    f        f   e             f        f        f   e    f        f   e    f        f
-    //        gggg              gggg     gggg              gggg     gggg              gggg     gggg
-    //
-    // len:       6        2        5        5        4        5        6        3        7        6
-    //
-    // len 2: "1" = cf                              (not: abdeg)
-    // len 3: "7" = acf                             (not: bdeg )
-    // len 4: "4" = bcdf                            (not: aeg  )
-    // len 5: "2" = acdeg, "3" = acdfg, "5" = abdfg (common: adg  , unique: be, twice: cf)
-    // len 6: "0" = abcefg, "6" = abdefg            (common: abcfg, unique: de)
+    // len 2: "1" = ..c..f.
+    // len 3: "7" = a.c..f.
+    // len 4: "4" = .bcd.f.
+    // len 5: "2" = a.cde.g
+    //        "5" = ab.d.fg
+    //        "3" = a.cd.fg
+    // len 6: "0" = abc.efg
+    //        "6" = ab.defg
+    //        "9" = abcd.fg
     // len 7: "8" = abcdefg
 
     ans = 0;
     for (int i = 0; i < N; ++i) {
-        for (int j = 0; j < IN; ++j)
-            qsort(inp[i][j], strlen(inp[i][j]), 1, cmp);
-        for (int j = 0; j < OUT; ++j)
-            qsort(out[i][j], strlen(out[i][j]), 1, cmp);
-    }
+        char seg1[L + 1], seg4[L + 1], seg9[L + 1];  // deciders
+        for (int j = 0; j < 10; ++j)
+            switch (len[i][j]) {
+                case 2: strcpy(seg1, seg[i][j]); break;
+                case 4: strcpy(seg4, seg[i][j]); break;  // 4 is needed to find 9
+            }
+        for (int j = 0; j < 10; ++j)
+            if (len[i][j] == 6 && contains(seg[i][j], seg4))
+                strcpy(seg9, seg[i][j]);
 
-    for (int i = 0; i < 1; ++i) {
         int val = 0;
-        for (int j = 0; j < L; ++j) {
-            wire[j] = -1;  // nothing known yet
-            for (int k = 0; k < L; ++k)
-                possib[j][k] = true;  // all is still possible
-            pcount[j] = L;
-        }
-        for (int j = 0; j < OUT; ++j) {
-            size_t k = strlen(out[i][j]);
-            if (k == 2) { // len 2 = "1" = cf
-                const char elim[] = "abdeg";
-                const char *e = elim;
-                while (*e) {
-                    int p = *e - 'a';
-                    for (int l = 0; l < k; ++l) {
-                        int q = out[i][j][l] - 'a';
-                        if (possib[p][q]) {
-                            possib[p][q] = false;  // p is not connected to q
-                            pcount[p]--;
-                        }
+        for (int j = 10; j < M; ++j) {
+            val *= 10;
+            switch (len[i][j]) {
+                case 2: val += 1; break;
+                case 3: val += 7; break;
+                case 4: val += 4; break;
+                case 5:
+                    if (contains(seg[i][j], seg1)) {
+                        val += 3;
+                    } else if (contains(seg9, seg[i][j])) {
+                        val += 5;
+                    } else {
+                        val += 2;
                     }
-                    ++e;
-                }
-            }
-            else if (k == 3) { // len 3 = "7" = acf
-                for (int l = 0; l < k; ++l) {
-                    int w = out[i][j][l] - 'a';
-                    possib['b' - 'a'][w] = false;  // not b
-                    possib['d' - 'a'][w] = false;  // not d
-                    possib['e' - 'a'][w] = false;  // not e
-                    possib['g' - 'a'][w] = false;  // not g
-                }
-            }
-            else if (k == 4) { // len 4 = "4" = bcdf
-                for (int l = 0; l < k; ++l) {
-                    int w = out[i][j][l] - 'a';
-                    possib['a' - 'a'][w] = false;  // not a
-                    possib['e' - 'a'][w] = false;  // not e
-                    possib['g' - 'a'][w] = false;  // not g
-                }
-            }
-
-            bool changed = true;
-            while (changed) {
-                changed = false;
-                for (int l = 0; l < L; ++l) {
-                    if (pcount[l] == 1 && wire[l] == -1) {
-                        int m = 0;
-                        while (!possib[l][m])
-                            ++m;
-                        wire[l] = m;
-                        for (int n = 0; n < L; ++n) {
-                            if (n != l) {
-                                if (possib[n][m]) {
-                                    possib[n][m] = false;
-                                    changed = true;
-                                }
-                            }
-                        }
-                    } else if (pcount[l] == 2) {
-                        // TODO
+                    break;
+                case 6:
+                    if (!contains(seg[i][j], seg1)) {
+                        val += 6;
+                    } else if (contains(seg[i][j], seg4)) {
+                        val += 9;
+                    } else {
+                        val += 0;
                     }
-                }
+                    break;
+                case 7: val += 8; break;
             }
-
         }
-
-        int fixed = 0;
-        for (int j = 0; j < L; ++j) {
-            fixed += wire[j] != -1;
-        }
-        if (fixed == L) {
-            // TODO: compute val
-            ans += val;
-        } else {
-            printf("  abcdefg\n");
-            for (int j = 0; j < L; ++j) {
-                printf("%c ", 'a' + j);
-                for (int k = 0; k < L; ++k) {
-                    printf("%c", possib[j][k] ? 'x' : '.');
-                }
-                printf("\n");
-            }
-            printf("wire: ");
-            for (int j = 0; j < L; ++j) {
-                printf("%c", wire[j] == -1 ? '.' : 'a' + wire[j]);
-            }
-            printf("\n");
-        }
+        ans += val;
     }
-
-    printf("Part 2: %d\n", ans);
+    printf("Part 2: %d\n", ans);  // 1070188
     return 0;
 }
