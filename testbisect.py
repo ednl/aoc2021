@@ -9,19 +9,18 @@ def g(x):
 # Assume function has one minimum between a and b
 def bisect(a, b, fun):
     loop = 0
-    res = 0
     while (a < b):
         loop += 1
-        c = (a + b) // 2
-        res = fun(c)
-        dc = fun(c + 1) - res
-        if dc > 0:     # rising
-            b = c      # new upper bound
-        elif dc < 0:   # falling
-            a = c + 1  # new lower bound
-        else:          # constant
-            break      # found it
-    return res, loop
+        c = (a + b) // 2         # centre point, rounded down
+        d = fun(c + 1) - fun(c)  # differential between x and x+1
+        if d > 0:                # rising => minimum is to the left
+            b = c                # new upper bound
+        elif d < 0:              # falling => minimum is to the right
+            a = c + 1            # new lower bound
+        else:                    # constant => minimum found at both c and c+1
+            a = c                #   (doesn't happen in AoC 2021 day 7)
+            break
+    return fun(a), loop
 
 # Min/max from data
 a = 0
