@@ -27,7 +27,7 @@ static int fillbasin(int x, int y)
             done[p.x][p.y] = true;
             if (height[p.x][p.y] < MAXHEIGHT) {
                 if (sp >= STACKSIZE - 4) {
-                    printf("Stack overflow!");
+                    fprintf(stderr, "Imminent stack overflow!\n");
                     return -1;
                 }
                 if (!done[p.x + 1][p.y]) todo[sp++] = (Point){p.x + 1, p.y};
@@ -72,11 +72,11 @@ int main(void)
                 height[i][j] < height[i + 1][j] &&
                 height[i][j] < height[i][j + 1]) {
                 risk += height[i][j] + 1;
-                basin[count++] = fillbasin(i, j);
                 if (count == MAXBASINS) {
-                    printf("Too many damn basins!");
+                    fprintf(stderr, "The number of basins is too damn high!\n");
                     return 1;
                 }
+                basin[count++] = fillbasin(i, j);
             }
         }
     }
