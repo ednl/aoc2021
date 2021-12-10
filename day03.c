@@ -1,58 +1,47 @@
 #include <stdio.h>
+#include <stdbool.h>
 
 #define N 1000  // lines in input file
 #define W 12    // word size (12-bit numbers)
+#define S "12"  // word length in format string
 
-static unsigned int data[N] = {0};
+typedef struct Data {
+    unsigned int val;
+    char word[W + 1];
+    bool selected;
+} Data;
+static Data data[N] = {0};
+
+// What's the most or least common bit at index 'pos'?
+// most==true : choose the most  common bit, if equal prefer 1
+// most==false: choose the least common bit, if equal prefer 0
+static char common(int pos, bool most)
+{
+    int remaining = 0, ones = 0;
+    for (int i = 0; i < N; ++i) {
+        if (data[i].selected) {
+            ++remaining;
+            ones += data[i].word[pos] == '1';
+        }
+    }
+    int zeros = remaining - ones;
+    return ones >= zeros ? '0' + most : '1' - most;
+}
 
 int main(void)
 {
     FILE *f = fopen("input03.txt", "r");
-    if (!f)
-        return 1;
-
-    unsigned int i = 0, j, k;
-    while (i < N) {
-        k = 0;
-        for (j = 0; j < W; ++j) {
-            k = (k << 1) | (fgetc(f) == '1');
-        }
-        data[i++] = k;
-        fgetc(f); // newline
-    }
+    for (int i = 0; i < N && fscanf(f, "%"S"s ", data[i].word) == 1; ++i)
+        data[i].selected = true;
     fclose(f);
-    if (i != N)
-        return 2;
 
-    unsigned int hist[W] = {0};
-    for (i = 0; i < N; ++i) {
-        k = 1 << W;
-        for (j = 0; j < W; ++j) {
-            k >>= 1;
-            hist[j] += (data[i] & k) != 0;
-        }
-    }
-
-    unsigned int half = N >> 1, gamma = 0;
-    for (i = 0; i < W; ++i) {
+    int gamma = 0;
+    for (int i = 0; i < W; ++i) {
         gamma <<= 1;
-        gamma |= (hist[i] > half);
+        gamma |= common(i, true) == '1';
     }
-    unsigned int epsilon = gamma ^ ((1 << W) - 1);  // flip "W" LSBs in gamma
-    printf("Part 1: %u\n", gamma * epsilon);
-
-    k = 1 << W;
-    for (j = 0; j < W; ++j) {
-        k >>= 1;
-        unsigned int remain = N;
-        while (k && remain > 1) {
-            //
-            for (i = 0; i < N; ++i) {
-                //
-            }
-            //
-        }
-    }
+    int epsilon = gamma ^ ((1<<W) - 1);
+    printf("Part 1: %d\n", gamma * epsilon);  // 4147524
 
     return 0;
 }
