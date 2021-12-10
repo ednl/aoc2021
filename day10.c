@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>    // qsort
-#include <stdint.h>    // uint64_t
-#include <inttypes.h>  // PRIu64
+#include <stdint.h>    // int64_t
+#include <inttypes.h>  // PRId64
 
 #define STACKSIZE 16  // 15 for my input
 #define INCSIZE   48  // 47 for my input
