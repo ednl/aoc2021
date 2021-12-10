@@ -17,12 +17,11 @@ static Data data[N] = {0};
 static char common(int pos, bool most)
 {
     int remaining = 0, ones = 0;
-    for (int i = 0; i < N; ++i) {
-        if (data[i].selected) {
+    for (int i = 0; i < N; ++i)
+        if (data[i].selected) {  // important for part 2!
             ++remaining;
             ones += data[i].word[pos] == '1';
         }
-    }
     int zeros = remaining - ones;
     return ones >= zeros ? '0' + most : '1' - most;
 }
@@ -55,15 +54,12 @@ static int reduce(bool most)
     int remaining = N, pos = 0;
     while (remaining > 1 && pos < W) {
         char c = common(pos, most);
-        for (int i = 0; i < N; ++i) {
-            if (data[i].selected) {
-                if (data[i].word[pos] != c) {
-                    data[i].selected = false;
-                    if (--remaining == 1)
-                        return selectedval();
-                }
+        for (int i = 0; i < N; ++i)
+            if (data[i].selected && data[i].word[pos] != c) {
+                data[i].selected = false;
+                if (--remaining == 1)
+                    return selectedval();
             }
-        }
         ++pos;
     }
     return 0;
