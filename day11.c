@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <limits.h>
-#include "nanotimer.h"
+#include "startstoptimer.h"
 
 #define STEPS 100
 #define FLASH 10
@@ -42,8 +42,7 @@ static int cascade(void)
 
 int main(void)
 {
-    // Start timer
-    nanotimer();
+    starttimer();
 
     // Import
     FILE *f = fopen("input11.txt", "r");
@@ -66,7 +65,6 @@ int main(void)
     while (++step && cascade() < DIM * DIM);
     printf("Part 2: %d\n", step);  // 324
 
-    // Run time in ms
-    printf("Time: %.3f ms\n", nanotimer() * 1e-6);
+    printf("Time: %.3f ms\n", stoptimer_ms());
     return 0;
 }
