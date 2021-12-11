@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <time.h>
 #include "startstoptimer.h"
 
@@ -19,6 +20,16 @@ static struct timespec t0 = {0}, t1 = {0};
 
 void starttimer(void)
 {
+    // Warn on Raspberry Pi if not running at max performance
+    FILE *f = fopen("/sys/devices/system/cpu/cpufreq/policy0/scaling_governor", "r");
+    if (f) {
+        if (fgetc(f) != 'p' || fgetc(f) != 'e')
+            fprintf(stderr,
+                "Warning: CPU not optimised for performance.\n"
+                "  Resolve: echo performance | sudo tee /sys/devices/system/cpu/cpufreq/policy0/scaling_governor\n"
+                "  Setting will be restored to default 'ondemand' at reboot.\n");
+        fclose(f);
+    }
     clock_gettime(CLOCK_MONOTONIC_RAW, &t0);
 }
 
