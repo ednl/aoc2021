@@ -36,7 +36,10 @@ static int cascade(void)
     int n = 0;
     for (int i = 1; i <= DIM; ++i)
         for (int j = 1; j <= DIM; ++j)
-            oct[i][j] < 0 && ++n && (oct[i][j] = 0);
+            if (oct[i][j] < 0) {
+                oct[i][j] = 0;
+                ++n;
+            }
     return n;
 }
 
@@ -65,6 +68,6 @@ int main(void)
     while (++step && cascade() < DIM * DIM);
     printf("Part 2: %d\n", step);  // 324
 
-    printf("Time: %.1f µs\n", stoptimer_us());
+    printf("\nTime: %.1f µs\n", stoptimer_us());
     return 0;
 }
