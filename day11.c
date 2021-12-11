@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
-#include <limits.h>
+#include <limits.h>  // CHAR_MIN
 #include "startstoptimer.h"
 
 #define STEPS 100
@@ -65,6 +65,6 @@ int main(void)
     while (++step && cascade() < DIM * DIM);
     printf("Part 2: %d\n", step);  // 324
 
-    printf("Time: %.3f ms\n", stoptimer_ms());
+    printf("Time: %.1f µs\n", stoptimer_us());
     return 0;
 }
