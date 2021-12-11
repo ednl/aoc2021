@@ -1,12 +1,12 @@
 #include <stdio.h>
 #include <stdbool.h>
-#include <limits.h>  // CHAR_MIN
+#include <limits.h>  // INT_MIN
 #include "startstoptimer.h"
 
 #define STEPS 100
-#define FLASH 10
-#define DIM 10
-static char oct[DIM + 2][DIM + 2] = {0};
+#define FLASH  10
+#define DIM    10
+static int oct[DIM + 2][DIM + 2] = {0};
 
 static int cascade(void)
 {
@@ -28,7 +28,7 @@ static int cascade(void)
                         for (int y = j - 1; y <= j + 1; ++y)
                             oct[x][y]++;
                     // Mark as done
-                    oct[i][j] = CHAR_MIN;
+                    oct[i][j] = INT_MIN;
                 }
     } while (flash);
 
@@ -51,7 +51,7 @@ int main(void)
     FILE *f = fopen("input11.txt", "r");
     for (int i = 1; i <= DIM; ++i) {
         for (int j = 1; j <= DIM; ++j)
-            oct[i][j] = (char)(fgetc(f) - '0');
+            oct[i][j] = fgetc(f) - '0';
         fgetc(f);  // discard \n
     }
     fclose(f);
