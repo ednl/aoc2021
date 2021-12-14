@@ -1,56 +1,125 @@
 #include <stdio.h>
-#include <stdlib.h>
+#include <stdint.h>    // int64_t
+#include <limits.h>    // UINT64_MAX
+#include <inttypes.h>  // PRIu64
+#include <string.h>    // strlen
 #include "startstoptimer.h"
 
-#define N 100
-#define LEN 20000
+#define BUFLEN  64   // original polymer length = 20 in my input
+#define BUFFRM "63"  // read max BUFLEN-1 chars
+#define RULES  100   // number of pair replacement rules
+#define ELMS  ('Z' - 'A' + 1)  // number of elements = letters in the alphabet
 
-typedef struct {
-    int id;
-    char pair[3], ins;
+typedef struct Rule {
+    struct Rule *left, *right;  // pointers to replacement pairs (NULL = no replacement)
+    int64_t count, next;        // how many of this pair now and next round
+    char pair[3], ins;          // pair (2 elements) to replace, 1 element to insert
 } Rule;
 
-static Rule rule[N] = {0};
-static char polymer[2][LEN] = {0};
+static Rule rule[RULES] = {0};
+static int64_t corr[ELMS] = {0};
 
-static int id_asc(const void *a, const void *b)
+static inline int ix(const char c)
 {
-    const int p = ((const Rule * const)a)->id;
-    const int q = ((const Rule * const)b)->id;
-    return (q < p) - (p < q);
+    return (int)(c - 'A');
 }
 
-static Rule* ruleindex(int id)
+static Rule* findrule_c(const char a, const char b)
 {
-    const Rule key = (Rule){.id=id};
-    return bsearch(&key, rule, N, sizeof *rule, id_asc);
+    for (int i = 0; i < RULES; ++i)
+        if (rule[i].pair[0] == a && rule[i].pair[1] == b)
+            return &rule[i];
+    return NULL;
 }
 
-static void insert(char *src, char *dst)
+static Rule* findrule_s(const char *s)
 {
-    Rule *p;
-    int id = *dst++ = *src++;
-    while (*src) {
-        id = ((id & 255) << 8) | *src;
-        if ((p = ruleindex(id)))
-            *dst++ = p->ins;
-        *dst++ = *src++;
+    return findrule_c(s[0], s[1]);
+}
+
+static void read(const char *inp)
+{
+    char polymer[BUFLEN];
+    int len = 0, n = 0;
+
+    FILE *f = fopen(inp, "r");
+    if (fscanf(f, "%"BUFFRM"s ", polymer) == 1)
+        len = (int)strlen(polymer);
+    while (n < RULES && fscanf(f, "%2s -> %c", rule[n].pair, &rule[n].ins) == 2)
+        ++n;
+    fclose(f);
+
+    // Count elements by pairs in initial polymer
+    if (len > 1) {
+        Rule *r;
+        // First pair
+        if ((r = findrule_s(polymer))) {
+            r->count++;                      // no duplicate element yet
+        } else {
+            corr[ix(polymer[0])]++;          // not found, add both elements individually
+            corr[ix(polymer[1])]++;
+        }
+        // Proceed with next (overlapping) pair
+        for (int i = 1; i < len - 1; ++i)
+            if ((r = findrule_s(&polymer[i]))) {
+                r->count++;                  // add another pair, and
+                corr[ix(polymer[i])]--;      // subtract duplicate element
+            } else
+                corr[ix(polymer[i + 1])]++;  // add only the new element
+    }
+
+    // Links to replacement pairs
+    for (int i = 0; i < n; ++i) {
+        rule[i].left  = findrule_c(rule[i].pair[0], rule[i].ins    );
+        rule[i].right = findrule_c(rule[i].ins    , rule[i].pair[1]);
     }
 }
 
-static int range(const char *s)
+static void grow(void)
 {
-    int freq[26] = {0};
-    const char *c = s;
-    while (*c)
-        freq[*c++ - 'A']++;
+    for (int i = 0; i < RULES; ++i)
+        if (rule[i].count) {
+            if (rule[i].left && rule[i].right) {
+                rule[i].left->next        += rule[i].count;
+                rule[i].right->next       += rule[i].count;
+                corr[ix(rule[i].ins)]     -= rule[i].count;  // subtract duplicate element
+            } else if (rule[i].left) {
+                rule[i].left->next        += rule[i].count;
+                corr[ix(rule[i].pair[1])] += rule[i].count;
+            } else if (rule[i].right) {
+                corr[ix(rule[i].pair[0])] += rule[i].count;
+                rule[i].right->next       += rule[i].count;
+            } else
+                rule[i].next              += rule[i].count;
+        }
+    for (int i = 0; i < RULES; ++i) {
+        rule[i].count = rule[i].next;
+        rule[i].next = 0;  // always reset for next growth cycle!
+    }
+}
 
-    int min = LEN, max = 0;
-    for (int i = 0; i < 26; ++i) {
-        if (freq[i] && freq[i] < min)
-            min = freq[i];
-        if (freq[i] > max)
-            max = freq[i];
+static int64_t range(const int cycle)
+{
+    // Grow the polymer
+    for (int i = 0; i < cycle; ++i)
+        grow();
+
+    // Count individual elements from pairs
+    int64_t hist[ELMS] = {0};
+    for (int i = 0; i < RULES; ++i) {
+        hist[ix(rule[i].pair[0])] += rule[i].count;
+        hist[ix(rule[i].pair[1])] += rule[i].count;
+    }
+
+    // Correct element count with added and subtracted counts,
+    // determine maximum and minimum (non zero), return range
+    int64_t min = INT64_MAX, max = 0;
+    for (int i = 0; i < ELMS; ++i) {
+        hist[i] += corr[i];
+        if (hist[i] < min && hist[i])
+            min = hist[i];
+        if (hist[i] > max)
+            max = hist[i];
     }
     return max - min;
 }
@@ -58,23 +127,9 @@ static int range(const char *s)
 int main(void)
 {
     starttimer();
-
-    FILE *f = fopen("input14.txt", "r");
-    fscanf(f, "%s ", polymer[0]);
-    for (int i = 0; i < N && fscanf(f, "%2s -> %c", rule[i].pair, &rule[i].ins) == 2; ++i)
-        rule[i].id = (rule[i].pair[0] << 8) | rule[i].pair[1];
-    fclose(f);
-    qsort(rule, N, sizeof *rule, id_asc);
-
-    char *src = polymer[1], *dst = polymer[0], *t;
-    for (int i = 0; i < 10; ++i) {
-        t = src;
-        src = dst;
-        dst = t;
-        insert(src, dst);
-    }
-    printf("Part 1: %d\n", range(dst));  // 2194
-
-    printf("%.2f ms\n", stoptimer_ms());
+    read("input14.txt");
+    printf("Part 1: %"PRId64"\n", range(10));  // 2194
+    printf("Part 2: %"PRId64"\n", range(30));  // 2360298895777
+    printf("%.0f µs\n", stoptimer_us());
     return 0;
 }
