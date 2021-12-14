@@ -20,7 +20,7 @@ static int id_asc(const void *a, const void *b)
     return (q < p) - (p < q);
 }
 
-static Rule* index(int id)
+static Rule* ruleindex(int id)
 {
     const Rule key = (Rule){.id=id};
     return bsearch(&key, rule, N, sizeof *rule, id_asc);
@@ -32,7 +32,7 @@ static void insert(char *src, char *dst)
     int id = *dst++ = *src++;
     while (*src) {
         id = ((id & 255) << 8) | *src;
-        if ((p = index(id)))
+        if ((p = ruleindex(id)))
             *dst++ = p->ins;
         *dst++ = *src++;
     }
