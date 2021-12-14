@@ -1,23 +1,23 @@
 #include <stdio.h>
 #include <stdint.h>    // int64_t
-#include <limits.h>    // UINT64_MAX
-#include <inttypes.h>  // PRIu64
+#include <limits.h>    // INT64_MAX
+#include <inttypes.h>  // PRId64
 #include <string.h>    // strlen
 #include "startstoptimer.h"
 
-#define BUFLEN  64   // original polymer length = 20 in my input
-#define BUFFRM "63"  // read max BUFLEN-1 chars
-#define RULES  100   // number of pair replacement rules
-#define ELMS  ('Z' - 'A' + 1)  // number of elements = letters in the alphabet
+#define BUFLEN   64   // original polymer length = 20 in my input
+#define BUFFRM  "63"  // read BUFLEN-1 chars max
+#define RULES   100   // number of pair replacement rules in my input
+#define ELEMENTS ('Z' - 'A' + 1)  // number of elements = letters in the alphabet
 
 typedef struct Rule {
     struct Rule *left, *right;  // pointers to replacement pairs (NULL = no replacement)
-    int64_t count, next;        // how many of this pair now and next round
-    char pair[3], ins;          // pair (2 elements) to replace, 1 element to insert
+    int64_t count, next;        // how many of this pair are there now and next round
+    char pair[3], ins;          // pair (=2 elements) to replace, 1 element to insert
 } Rule;
 
 static Rule rule[RULES] = {0};
-static int64_t corr[ELMS] = {0};
+static int64_t corr[ELEMENTS] = {0};
 
 static inline int ix(const char c)
 {
@@ -105,7 +105,7 @@ static int64_t range(const int cycle)
         grow();
 
     // Count individual elements from pairs
-    int64_t hist[ELMS] = {0};
+    int64_t hist[ELEMENTS] = {0};
     for (int i = 0; i < RULES; ++i) {
         hist[ix(rule[i].pair[0])] += rule[i].count;
         hist[ix(rule[i].pair[1])] += rule[i].count;
@@ -114,7 +114,7 @@ static int64_t range(const int cycle)
     // Correct element count with added and subtracted counts,
     // determine maximum and minimum (non zero), return range
     int64_t min = INT64_MAX, max = 0;
-    for (int i = 0; i < ELMS; ++i) {
+    for (int i = 0; i < ELEMENTS; ++i) {
         hist[i] += corr[i];
         if (hist[i] < min && hist[i])
             min = hist[i];
