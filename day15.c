@@ -8,7 +8,8 @@
 
 #define INP "input15.txt"
 #define DIM 100
-static int grid[DIM][DIM] = {0};
+#define BQMOD 9  // different edge weights 1-9
+static int risk[DIM][DIM] = {0};
 
 typedef struct {
     int x, y;
@@ -57,22 +58,78 @@ static bool pq_pop(PQ **pq, Point * const data)
     return true;
 }
 
+typedef struct BQL {
+    struct BQL *next;
+    Point data;
+} BQL;
+static struct {
+    BQL *head, *tail;
+} bucketq[BQMOD + 1] = {0};  // 0, 1-9
+static int bqsize = 0, bqmin = 0;
+
+static bool bq_push(const Point data, const int prio)
+{
+    BQL *node = malloc(sizeof(BQL));
+    if (!node)
+        return false;
+    *node = (BQL){.next=NULL, .data=data};
+    const int b = prio ? (prio - 1) % BQMOD + 1 : 0;
+    if (bucketq[b].tail)
+        bucketq[b].tail = (bucketq[b].tail->next = node);
+    else
+        bucketq[b].head = (bucketq[b].tail = node);
+    if (!bqsize++)
+        bqmin = b;
+    return true;
+}
+
+static bool bq_pop(Point *data)
+{
+    if (!bqsize)
+        return false;
+    BQL *p = bucketq[bqmin].head;
+    *data = p->data;
+    --bqsize;
+    if ((bucketq[bqmin].head = p->next) == NULL) {
+        bucketq[bqmin].tail = NULL;
+        if (bqsize)
+            while (bucketq[bqmin].head == NULL)
+                bqmin = bqmin % BQMOD + 1;
+    }
+    free(p);
+    return data;
+}
+
+static void bq_clean(void)
+{
+    for (int i = 0; i < 10; ++i) {
+        while (bucketq[i].head) {
+            BQL *p = bucketq[i].head;
+            bucketq[i].head = p->next;
+            free(p);
+        }
+        bucketq[i].tail = NULL;
+    }
+    bqsize = 0;
+}
+
 static int astar(const int mult)
 {
     static const Point nb[4] = {{-1,0},{0,-1},{1,0},{0,1}};
-    int cost[DIM * mult][DIM * mult];
-    int f[DIM * mult][DIM * mult];
-    int g[DIM * mult][DIM * mult];
-    bool inq[DIM * mult][DIM * mult];
+    int mdim = DIM * mult;
+    int cost[mdim][mdim];
+    int f[mdim][mdim];
+    int g[mdim][mdim];
+    bool inq[mdim][mdim];
     Point cur = (Point){0, 0};
-    Point end = (Point){DIM * mult - 1, DIM * mult - 1};
+    Point end = (Point){mdim - 1, mdim - 1};
     PQ *pq = NULL;
 
-    for (int i = 0; i < DIM * mult; ++i) {
+    for (int i = 0; i < mdim; ++i) {
         const int id = i / DIM;
         const int im = i % DIM;
-        for (int j = 0; j < DIM * mult; ++j) {
-            cost[i][j] = 1 + (grid[im][j % DIM] - 1 + id + j / DIM) % 9;
+        for (int j = 0; j < mdim; ++j) {
+            cost[i][j] = (risk[im][j % DIM] - 1 + id + j / DIM) % BQMOD + 1;
             f[i][j] = g[i][j] = INT_MAX;
             inq[i][j] = false;
         }
@@ -80,31 +137,78 @@ static int astar(const int mult)
     f[0][0] = end.x + end.y;  // h() = Manhattan distance to goal
     g[0][0] = 0;
     pq_push(&pq, cur, f[0][0]);
+    // bq_push(cur, f[0][0]);
     inq[cur.y][cur.x] = true;
 
-    while (pq) {
-        pq_pop(&pq, &cur);
+    while (pq_pop(&pq, &cur)) {
+    // while (bq_pop(&cur)) {
         if (cur.x == end.x && cur.y == end.y) {
             pq_clean(&pq);
+            // bq_clean();
             return f[end.y][end.x];
         }
         inq[cur.y][cur.x] = false;
         for (size_t i = 0; i < sizeof nb / sizeof *nb; ++i) {
             Point nxt = (Point){cur.x + nb[i].x, cur.y + nb[i].y};
-            if (nxt.x >= 0 && nxt.y >= 0 && nxt.x < DIM * mult && nxt.y < DIM * mult) {
+            if (nxt.x >= 0 && nxt.y >= 0 && nxt.x < mdim && nxt.y < mdim) {
                 int nxtg = g[cur.y][cur.x] + cost[nxt.y][nxt.x];
                 if (nxtg < g[nxt.y][nxt.x]) {
                     g[nxt.y][nxt.x] = nxtg;
                     f[nxt.y][nxt.x] = nxtg + end.x - nxt.x + end.y - nxt.y;  // h() = Manhattan distance to goal
-                    if (!inq[nxt.y][nxt.x]) {
-                        pq_push(&pq, nxt, f[nxt.y][nxt.x]);
-                        inq[nxt.y][nxt.x] = true;
-                    }
+                    if (!inq[nxt.y][nxt.x])
+                        inq[nxt.y][nxt.x] = pq_push(&pq, nxt, f[nxt.y][nxt.x]);
+                        // inq[nxt.y][nxt.x] = bq_push(nxt, f[nxt.y][nxt.x]);
                 }
             }
         }
     }
     pq_clean(&pq);
+    // bq_clean();
+    return -1;
+}
+
+static int dijkstra(const int mult)
+{
+    static const Point nb[4] = {{-1,0},{0,-1},{1,0},{0,1}};
+    int mdim = DIM * mult;
+    int edge[mdim][mdim];
+    int dist[mdim][mdim];
+    bool inq[mdim][mdim];
+    Point cur = (Point){0, 0};
+    Point end = (Point){mdim - 1, mdim - 1};
+
+    for (int i = 0; i < mdim; ++i) {
+        const int idiv = i / DIM;
+        const int imod = i % DIM;
+        for (int j = 0; j < mdim; ++j) {
+            edge[i][j] = (risk[imod][j % DIM] - 1 + idiv + j / DIM) % BQMOD + 1;
+            dist[i][j] = INT_MAX;
+            inq[i][j] = false;
+        }
+    }
+    dist[0][0] = 0;
+    inq[cur.y][cur.x] = bq_push(cur, dist[0][0]);
+
+    while (bq_pop(&cur)) {
+        if (cur.x == end.x && cur.y == end.y) {
+            bq_clean();
+            return dist[end.y][end.x];
+        }
+        inq[cur.y][cur.x] = false;
+        for (size_t i = 0; i < sizeof nb / sizeof *nb; ++i) {
+            Point nxt = (Point){cur.x + nb[i].x, cur.y + nb[i].y};
+            if (nxt.x >= 0 && nxt.y >= 0 && nxt.x < mdim && nxt.y < mdim) {
+                int nxtdist = dist[cur.y][cur.x] + edge[nxt.y][nxt.x];
+                if (nxtdist < dist[nxt.y][nxt.x]) {
+                    dist[nxt.y][nxt.x] = nxtdist;
+                    if (!inq[nxt.y][nxt.x]) {
+                        inq[nxt.y][nxt.x] = bq_push(nxt, dist[nxt.y][nxt.x]);
+                    }
+                }
+            }
+        }
+    }
+    bq_clean();
     return -1;
 }
 
@@ -114,13 +218,15 @@ int main(void)
     FILE *f = fopen(INP, "r");
     for (int i = 0; i < DIM; ++i) {
         for (int j = 0; j < DIM; ++j)
-            grid[i][j] = fgetc(f) - '0';
+            risk[i][j] = fgetc(f) - '0';
         fgetc(f);  // newline
     }
     fclose(f);
 
     printf("Part 1: %d\n", astar(1));  // 592
     printf("Part 2: %d\n", astar(5));  // 2897
+    // printf("Part 1: %d\n", dijkstra(1));  // 592
+    // printf("Part 2: %d\n", dijkstra(5));  // 2897
     printf("%.0f ms\n", stoptimer_ms());
     return 0;
 }
