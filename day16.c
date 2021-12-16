@@ -114,7 +114,7 @@ int main(void)
     int i = 0;
     int64_t part2 = getpacket(&i);
     printf("Part 1: %d\n", versionsum);  // 936
-    printf("Part 2: %lld\n", part2);     // 6802496672062
+    printf("Part 2: %"PRId64"\n", part2);     // 6802496672062
 
     printf("%.0f µs\n", stoptimer_us());
     return 0;
