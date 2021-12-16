@@ -2,85 +2,94 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <stdbool.h>
 
-#define N      1396       // hex chars in input
-#define HLEN   4          // hex char: 4 bits
-#define M     (N * HLEN)  // bits in input
-#define VTLEN  3          // version/type: 3 bits
-#define SUBLEN 11
-#define BITLEN 15
+#define N      1396     // hex chars in input
+#define NIBBLE    4     // hex char: 4 bits
+#define M (N * NIBBLE)  // bits in input
+#define VTLEN     3     // version/type: 3 bits
+#define SUBLEN   11
+#define BITLEN   15
 
 static bool bit[M] = {0};
 static int versionsum = 0;
 
-// type  4 = V,T,literal value (=zero or more of "1"+4bits, one final "0"+4bits)
-// type !4 = V,T,length bit+info,1 or more subpackets
-// length bit = 0: info = 15 bits total length of all subpackets
-// length bit = 1: info = 11 bits number of subpackets
-
-// Starts at index, consumes len bits, returns number
-static uint64_t getnumber(const int index, const int len)
+static int64_t getnumber(unsigned int *index, unsigned int len)
 {
-    uint64_t n = 0;
-    for (int i = index; i < index + len && i < M; ++i)
-        n = (n << 1) | (bit[i] ? 1 : 0);
+    int64_t n = 0;
+    while (len--)
+        n = (n << 1) | bit[(*index)++];
     return n;
 }
 
-// Sets *val, returns number of bits consumed
-static int getliteral(uint64_t * const val, const int index)
+static int64_t getliteral(unsigned int *index)
 {
-    *val = 0;
-    int i = index, nibbles = 0;
-    bool more = true;
-    while (more && nibbles < 16 && i < M - HLEN) {  // 16 * 4 = 64
-        more = bit[i++];  // 1-bit prefix of hex char (0=final, 1=there's more)
-        *val = (*val << HLEN) | getnumber(i, HLEN);
-        i += HLEN;
-        ++nibbles;
-    }
-    return i - index;
+    int64_t val = 0;
+    bool more;
+    do {
+        more = bit[(*index)++];
+        val = (val << NIBBLE) | getnumber(index, NIBBLE);
+    } while (more);
+    return val;
+}
+
+static inline int64_t min(int64_t a, int64_t b)
+{
+    return a < b ? a : b;
+}
+
+static inline int64_t max(int64_t a, int64_t b)
+{
+    return a > b ? a : b;
 }
 
 // Read packet and subpackets, updates global versionsum, returns number of bit consumed
-static int getpacket(const int index)
+static int64_t getpacket(unsigned int *index)
 {
-    int i = index;
-    unsigned char version = 0, typeid = 8;  // 8 = invalid
+    versionsum += (int)getnumber(index, VTLEN);
+    int8_t typeid = (int8_t)getnumber(index, VTLEN);
+    if (typeid == 4)
+        return getliteral(index);
 
-    if (i < M - VTLEN) {
-        version = (unsigned char)getnumber(i, VTLEN);
-        // printf("%4d: version = %u\n", i, version);
-        i += VTLEN;
-        versionsum += (int)version;
+    bool lengthid = bit[(*index)++];
+    int maxsubs, maxbits;
+    if (lengthid) {
+        maxsubs = (int)getnumber(index, SUBLEN);
+        maxbits = INT_MAX;
+    } else {
+        maxsubs = INT_MAX;
+        maxbits = (int)getnumber(index, BITLEN);
     }
-    if (i < M - VTLEN) {
-        typeid = (unsigned char)getnumber(i, VTLEN);
-        // printf("%4d: typeid = %u\n", i, version);
-        i += VTLEN;
-    }
-    uint64_t val;
-    if (typeid == 4) {
-        i += getliteral(&val, i);
-        // printf("%4d: val = %llu\n", i, val);
-    } else if (typeid < 8) {
-        if (bit[i++]) {
-            // Length type ID = 1 (11 bits = number of subpackets)
-            int subs = (int)getnumber(i, SUBLEN);
-            // printf("%4d: subs = %d\n", i, subs);
-            i += SUBLEN;
-            for (int j = 0; j < subs; ++j)
-                i += getpacket(i);
-        } else {
-            // Length type ID = 0 (15 bits = length of all subpackets)
-            int bits = (int)getnumber(i, BITLEN);
-            // printf("%4d: bits = %d\n", i, bits);
-            i += BITLEN;
-            for (const int start = i; i < start + bits; i += getpacket(i));
+    int64_t val = 0;
+    if (typeid < 4) {
+        switch (typeid) {
+            case 1: val = 1; break;  // prod
+            case 2: val = INT64_MAX; break;  // min
+            case 3: val = INT64_MIN; break;  // max
+        }
+        while (maxsubs > 0 && maxbits > 0) {
+            int i = (int)*index;
+            int64_t a = getpacket(index);
+            switch (typeid) {
+                case 0: val += a; break;  // sum
+                case 1: val *= a; break;  // prod
+                case 2: val = min(val, a); break;  // min
+                case 3: val = max(val, a); break;  // max
+            }
+            maxsubs--;
+            maxbits -= (int)*index - i;
+        }
+    } else {
+        int64_t a = getpacket(index);
+        int64_t b = getpacket(index);
+        switch (typeid) {
+            case 5: val = a > b; break;  // gt
+            case 6: val = a < b; break;  // lt
+            case 7: val = a == b; break;  // eq
         }
     }
-    return i - index;
+    return val;
 }
 
 int main(void)
@@ -93,23 +102,16 @@ int main(void)
         uint64_t val = strtoull(hex, &end, 16);
         ssize_t bitlen = (end - hex) * 4;
         uint64_t mask = (1ULL << (bitlen - 1));
-        // printf("mask=%16llx\n", mask);
         while (mask) {
             bit[k++] = (val & mask) != 0;
             mask >>= 1;
-            // printf("mask=%16llx\n", mask);
         }
-        // printf("%16s\n%16llx %2zd\n", hex, val, bitlen);
-        // break;
     }
     fclose(f);
-    // printf("k=%d k/4=%d\n", k, k / 4);
-    // printf("%16llx\n", getnumber(0, 64));  // 620D79802F600988
 
-    int index = 0;
-    while (index < M - 11)
-        index += getpacket(index);
-    printf("Part 1: %d\n", versionsum);  // ?
-
+    unsigned int i = 0;
+    int64_t part2 = getpacket(&i);
+    printf("Part 1: %d\n", versionsum);  // 936
+    printf("Part 2: %lld\n", part2);     // ?
     return 0;
 }
