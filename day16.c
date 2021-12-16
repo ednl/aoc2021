@@ -24,7 +24,7 @@ static uint64_t getnumber(const int index, const int len)
 {
     uint64_t n = 0;
     for (int i = index; i < index + len && i < M; ++i)
-        n = (n << 1) | bit[i];
+        n = (n << 1) | (bit[i] ? 1 : 0);
     return n;
 }
 
@@ -51,31 +51,31 @@ static int getpacket(const int index)
 
     if (i < M - VTLEN) {
         version = (unsigned char)getnumber(i, VTLEN);
-        printf("%4d: version = %u\n", i, version);
+        // printf("%4d: version = %u\n", i, version);
         i += VTLEN;
         versionsum += (int)version;
     }
     if (i < M - VTLEN) {
         typeid = (unsigned char)getnumber(i, VTLEN);
-        printf("%4d: type = %u\n", i, version);
+        // printf("%4d: typeid = %u\n", i, version);
         i += VTLEN;
     }
     uint64_t val;
     if (typeid == 4) {
         i += getliteral(&val, i);
-        printf("%4d: val = %llu\n", i, val);
+        // printf("%4d: val = %llu\n", i, val);
     } else if (typeid < 8) {
         if (bit[i++]) {
             // Length type ID = 1 (11 bits = number of subpackets)
             int subs = (int)getnumber(i, SUBLEN);
-            printf("%4d: subs = %d\n", i, subs);
+            // printf("%4d: subs = %d\n", i, subs);
             i += SUBLEN;
             for (int j = 0; j < subs; ++j)
                 i += getpacket(i);
         } else {
             // Length type ID = 0 (15 bits = length of all subpackets)
             int bits = (int)getnumber(i, BITLEN);
-            printf("%4d: bits = %d\n", i, bits);
+            // printf("%4d: bits = %d\n", i, bits);
             i += BITLEN;
             for (const int start = i; i < start + bits; i += getpacket(i));
         }
@@ -92,17 +92,22 @@ int main(void)
         char *end;
         uint64_t val = strtoull(hex, &end, 16);
         ssize_t bitlen = (end - hex) * 4;
-        uint64_t mask = 1 << (bitlen - 1);
+        uint64_t mask = (1ULL << (bitlen - 1));
+        // printf("mask=%16llx\n", mask);
         while (mask) {
-            bit[k++] = val & mask;
+            bit[k++] = (val & mask) != 0;
             mask >>= 1;
+            // printf("mask=%16llx\n", mask);
         }
+        // printf("%16s\n%16llx %2zd\n", hex, val, bitlen);
+        // break;
     }
     fclose(f);
-    printf("k=%d k/4=%d\n", k, k / 4);
+    // printf("k=%d k/4=%d\n", k, k / 4);
+    // printf("%16llx\n", getnumber(0, 64));  // 620D79802F600988
 
     int index = 0;
-    while (index < M)
+    while (index < M - 11)
         index += getpacket(index);
     printf("Part 1: %d\n", versionsum);  // ?
 
