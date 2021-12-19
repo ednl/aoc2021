@@ -19,11 +19,11 @@ int main(void)
 {
     FILE *f = fopen("input16.txt", "r");
     for (uint64_t *a = data; fscanf(f, "%16llX", a++) == 1; );
-    // number of hex characters in input file, remainder out of 16 (=64 bit)
-    int pos = (int)(ftell(f) - 1), rem = pos & 15;
+    int pos = (int)(ftell(f) - 1);  // number of hex characters in input file
+    fclose(f);
+    int rem = pos & 15;  // remainder out of 16 hex chars (= 64 bit)
     if (rem)
         data[pos >> 4] <<= 64 - (rem << 2);  // correct zeros gap in last value
-    fclose(f);
     bitcount = pos << 2;
 
     int ver = 0;
@@ -37,5 +37,10 @@ int main(void)
             index += bit(1) ? 11 : 15;
     }
     printf("Part 1: %d\n", ver);  // 936
+
+    index = 0;
+    uint64_t val = 0;
+    printf("Part 2: %llu\n", val);  // ?
+
     return 0;
 }
