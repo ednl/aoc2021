@@ -1,10 +1,11 @@
-#include <stdio.h>   // printf, getline
-#include <stdlib.h>  // free
+#include <stdio.h>   // getline
+#include <stdlib.h>  // free (after getline)
 #include <stdbool.h>
 #include "startstoptimer.h"
 
-#define LINES  100
-#define DIGITS 320  // stack for expansion while splitting, max for my input = 274
+#define LINES  100  // snailfish numbers in input file
+#define DIGITS 300  // stack size for digit expansion while splitting, max for my input = 274
+static const char *fname = "input18.txt";
 
 typedef struct {
     int level, value;
@@ -16,17 +17,6 @@ typedef struct {
 } SFNumber;
 
 static SFNumber homework[LINES] = {0};
-
-// static void show(SFNumber *const pn)
-// {
-//     printf("len=%d last=%d size=%d\n", pn->len, pn->last, pn->size);
-//     for (int i = 0; i != -1; i = pn->digit[i].next)
-//         printf("%3d", pn->digit[i].value);
-//     printf("\n");
-//     for (int i = 0; i != -1; i = pn->digit[i].next)
-//         printf("%3d", pn->digit[i].level);
-//     printf("\n");
-// }
 
 // Parse string to snailfish number
 static int strtosfn(const char *const str, SFNumber *const pn, const int size)
@@ -56,16 +46,19 @@ static int strtosfn(const char *const str, SFNumber *const pn, const int size)
 }
 
 // Save input to string array and as snailfish numbers, return lines read
-static size_t readinput(const char *const fn)
+static size_t read(void)
 {
-    char *line = NULL;
-    size_t size, i = 0;
-    ssize_t len;
-    FILE *f = fopen(fn, "r");
-    while (i < LINES && (len = getline(&line, &size, f)) > 0)
-        strtosfn(line, &homework[i++], DIGITS);
-    fclose(f);
-    free(line);
+    size_t i = 0;
+    FILE *f = fopen(fname, "r");
+    if (f) {
+        char *line = NULL;
+        size_t size;
+        ssize_t len;
+        while (i < LINES && (len = getline(&line, &size, f)) > 0)
+            strtosfn(line, &homework[i++], DIGITS);
+        free(line);
+        fclose(f);
+    }
     return i;
 }
 
@@ -205,7 +198,7 @@ int main(void)
 {
     starttimer();
 
-    size_t n = readinput("input18.txt");
+    size_t n = read();
     SFNumber sum = {0};
     copy(&sum, &homework[0]);     // init sum with first snailfish number
     for (size_t i = 1; i < n; ++i)
