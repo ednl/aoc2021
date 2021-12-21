@@ -11,12 +11,13 @@
 #define WIN2     21U
 #define CACHE 80000U  // (((9*10 + 9)*20 + 19)*20 + 19)*2 + 1 = 79999
 
+static const bool usecache = true;   // factor 100 in run time
 static uint64_t cache[CACHE] = {0};  // cache of intermediate results
 static bool cached[CACHE] = {0};
 
 // Multiple ways of summing to N with 3 rolls of 3-sided die [1,2,3],
 // e.g. sum 4 = (1+1+2) or (1+2+1) or (2+1+1) = 3 different ways.
-static const uint32_t mult[10] = {0,0,0,1,3,6,7,6,3,1};
+static const uint32_t combi[10] = {0,0,0,1,3,6,7,6,3,1};
 
 static uint32_t practicegame(uint32_t pos1, uint32_t pos2)
 {
@@ -49,37 +50,40 @@ static uint64_t diracdice(uint32_t pos1, uint32_t pos2, uint32_t score1, uint32_
     if (score2 >= WIN2) return 0;
 
     // Return cached result if available (hash should be unique)
-    uint32_t hash = ((((pos1 - 1)*10 + pos2 - 1)*20 + score1 - 1)*20 + score2 - 1)*2 + player1;
-    if (cached[hash])
-        return cache[hash];
+    uint32_t hash;
+    if (usecache) {
+        hash = ((((pos1 - 1)*10 + pos2 - 1)*20 + score1 - 1)*20 + score2 - 1)*2 + player1;
+        if (cached[hash])
+            return cache[hash];
+    }
 
     // Check every possible progression from this state and add up all wins for player 1
     uint64_t wins = 0;
     if (player1) {
         for (uint32_t d3 = 3; d3 < 10; ++d3) {
             uint32_t p = (pos1 - 1U + d3) % LOOP + 1U;
-            wins += mult[d3] * diracdice(p, pos2, score1 + p, score2, false);
+            wins += combi[d3] * diracdice(p, pos2, score1 + p, score2, false);
         }
     } else {
         for (uint32_t d3 = 3; d3 < 10; ++d3) {
             uint32_t p = (pos2 - 1U + d3) % LOOP + 1U;
-            wins += mult[d3] * diracdice(pos1, p, score1, score2 + p, true);
+            wins += combi[d3] * diracdice(pos1, p, score1, score2 + p, true);
         }
     }
 
     // Save result and return it
-    cached[hash] = true;
-    cache[hash] = wins;
+    if (usecache) {
+        cached[hash] = true;
+        cache[hash] = wins;
+    }
     return wins;
 }
 
 int main(void)
 {
     starttimer();
-
-    printf("Part 1: %"PRIu32"\n", practicegame(POS1, POS2));           // 428736
-    printf("Part 2: %"PRIu64"\n", diracdice(POS1, POS2, 0, 0, true));  // 57328067654557
-
-    printf("%.0f µs\n", stoptimer_us());
+    printf("Part 1: %"PRIu32"\n", practicegame(POS1, POS2));        // 428736
+    printf("Part 2: %"PRIu64"\n", diracdice(POS1, POS2, 0, 0, 1));  // 57328067654557
+    printf("%.2f ms\n", stoptimer_ms());
     return 0;
 }
