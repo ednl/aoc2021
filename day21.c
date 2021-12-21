@@ -27,17 +27,16 @@ static uint32_t practicegame(uint32_t pos1, uint32_t pos2)
             pos1 = (pos1 - 1U + d3) % LOOP + 1U;
             score1 += pos1;
             if (score1 >= WIN1)
-                break;
+                return roll * score2;  // use losing score
         } else {
             pos2 = (pos2 - 1U + d3) % LOOP + 1U;
             score2 += pos2;
             if (score2 >= WIN1)
-                break;
+                return roll * score1;  // use losing score
         }
         roll += 3;
         d3 += 9;
     }
-    return roll * (roll & 1U ? score2 : score1);
 }
 
 // Only calculates the number of wins for player 1,
