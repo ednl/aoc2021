@@ -9,7 +9,7 @@
 #define LOOP     10U
 #define WIN1   1000U
 #define WIN2     21U
-#define CACHE 80000U  // (((9*10 + 9)*20 + 19)*20 + 19)*2 + 1 = 79999
+#define CACHE 88200U  // (((9*10 + 9)*21 + 20)*21 + 20)*2 + 1 = 88199
 
 static const bool usecache = true;   // factor 100 in run time
 static uint64_t cache[CACHE] = {0};  // cache of intermediate results
@@ -51,7 +51,7 @@ static uint64_t diracdice(uint32_t pos1, uint32_t pos2, uint32_t score1, uint32_
     // Return cached result if available (hash should be unique)
     uint32_t hash;
     if (usecache) {
-        hash = ((((pos1 - 1)*10 + pos2 - 1)*20 + score1 - 1)*20 + score2 - 1)*2 + player1;
+        hash = ((((pos1 - 1)*10 + pos2 - 1)*21 + score1)*21 + score2)*2 + player1;
         if (cached[hash])
             return cache[hash];
     }
