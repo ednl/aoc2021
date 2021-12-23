@@ -43,30 +43,32 @@ int main(void)
     while (fscanf(f, "%3s x=%d..%d,y=%d..%d,z=%d..%d ", buf, &x0, &x1, &y0, &y1, &z0, &z1) == 7) {
         m = 0;
         for (int i = 0; i < n; ++i) {
-            Cube *c = &cub[i];  // convenience reference to existing cube
-            Cube d = (Cube){  // intersection of existing and new cube
-                x0 >= c->x0 ? x0 : c->x0, x1 <= c->x1 ? x1 : c->x1,
-                y0 >= c->y0 ? y0 : c->y0, y1 <= c->y1 ? y1 : c->y1,
-                z0 >= c->z0 ? z0 : c->z0, z1 <= c->z1 ? z1 : c->z1,
-                -c->count};  // opposite count to existing
-            if (d.x0 <= d.x1 && d.y0 <= d.y1 && d.z0 <= d.z1) {  // intersection not empty?
-                int j = 0;
-                while (j < m && (  // find same cube in current update array
-                    d.x0 != upd[j].x0 || d.x1 != upd[j].x1 ||
-                    d.y0 != upd[j].y0 || d.y1 != upd[j].y1 ||
-                    d.z0 != upd[j].z0 || d.z1 != upd[j].z1)) {
-                    ++j;
-                }
-                if (j < m) {
-                    // add to existing
-                    upd[j].count += d.count;
-                } else {
-                    // add new
-                    if (j == M2) {
-                        fprintf(stderr, "Cube upd overflow\n");
-                        return 1;
+            if (cub[i].count) {
+                Cube *c = &cub[i];  // convenience reference to existing cube
+                Cube d = (Cube){  // intersection of existing and new cube
+                    x0 >= c->x0 ? x0 : c->x0, x1 <= c->x1 ? x1 : c->x1,
+                    y0 >= c->y0 ? y0 : c->y0, y1 <= c->y1 ? y1 : c->y1,
+                    z0 >= c->z0 ? z0 : c->z0, z1 <= c->z1 ? z1 : c->z1,
+                    -c->count};  // opposite count to existing
+                if (d.x0 <= d.x1 && d.y0 <= d.y1 && d.z0 <= d.z1) {  // intersection not empty?
+                    int j = 0;
+                    while (j < m && (  // find same cube in current update array
+                        d.x0 != upd[j].x0 || d.x1 != upd[j].x1 ||
+                        d.y0 != upd[j].y0 || d.y1 != upd[j].y1 ||
+                        d.z0 != upd[j].z0 || d.z1 != upd[j].z1)) {
+                        ++j;
                     }
-                    upd[m++] = d;
+                    if (j < m) {
+                        // add to existing
+                        upd[j].count += d.count;
+                    } else {
+                        // add new
+                        if (j == M2) {
+                            fprintf(stderr, "Cube upd overflow\n");
+                            return 1;
+                        }
+                        upd[m++] = d;
+                    }
                 }
             }
         }
