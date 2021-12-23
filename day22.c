@@ -23,7 +23,7 @@ static bool intersect(const Cube *const a, const Cube *const b, Cube *const c)
             a->x0 >= b->x0 ? a->x0 : b->x0, a->x1 <= b->x1 ? a->x1 : b->x1,
             a->y0 >= b->y0 ? a->y0 : b->y0, a->y1 <= b->y1 ? a->y1 : b->y1,
             a->z0 >= b->z0 ? a->z0 : b->z0, a->z1 <= b->z1 ? a->z1 : b->z1,
-            -a->count};  // opposite count to first cube
+            -a->count};  // opposite count to first cube to neutralise the intersection
         return true;
     }
     return false;
@@ -33,14 +33,13 @@ static bool intersect(const Cube *const a, const Cube *const b, Cube *const c)
 static Cube* find(Cube *const a, const Cube *const b, const int alen)
 {
     int i = 0;
-    while (i < alen && (
-        a[i].x0 != b->x0 || a[i].x1 != b->x1 ||
-        a[i].y0 != b->y0 || a[i].y1 != b->y1 ||
-        a[i].z0 != b->z0 || a[i].z1 != b->z1)) {
-        i++;
-    }
+    Cube *c = a;
+    for (; i < alen && (
+        c->x0 != b->x0 || c->x1 != b->x1 ||
+        c->y0 != b->y0 || c->y1 != b->y1 ||
+        c->z0 != b->z0 || c->z1 != b->z1); ++i, ++c);
     if (i < alen)
-        return &a[i];
+        return c;
     return NULL;
 }
 
@@ -83,25 +82,26 @@ static int merge(Cube *const a, const Cube *const b, const int alen, const int b
     return n;
 }
 
+// Process instructions from input file, read 'lines' lines or all if lines=0
+// Return number of cells that are on
 static int64_t read(FILE *f, const int lines)
 {
     char buf[4];
     int x0, x1, y0, y1, z0, z1;
     for (int i = 0; (!lines || i < lines) && fscanf(f, "%3s x=%d..%d,y=%d..%d,z=%d..%d ", buf, &x0, &x1, &y0, &y1, &z0, &z1) == 7; ++i) {
-        Cube b = (Cube){x0, x1, y0, y1, z0, z1, buf[2] == '\0' ? 1 : -1}, c;
+        Cube b, a = (Cube){x0, x1, y0, y1, z0, z1, buf[2] == '\0' ? 1 : -1};
         int m = 0;
-        for (int j = 0; j < len; ++j)
-            if (intersect(&cube[j], &b, &c))
-                m = add(temp, &c, m, M);
-        if (b.count == 1)
-            m = add(temp, &b, m, M);
-        len = merge(cube, temp, len, m, N);
+        for (int j = 0; j < len; ++j)         // check against every existing cube
+            if (intersect(&cube[j], &a, &b))  // (b->count is opposite of cube[j].count)
+                m = add(temp, &b, m, M);      // save intersection for merge later
+        if (a.count == 1)                     // instruction is "on"?
+            m = add(temp, &a, m, M);          // also save new cube for merge
+        len = merge(cube, temp, len, m, N);   // merge temp array with cube array
     }
     int64_t on = 0;
-    for (int i = 0; i < len; ++i) {
-        Cube *a = &cube[i];
+    Cube *a = cube;
+    for (int i = 0; i < len; ++i, ++a)        // increment pointer by sizeof(Cube)
         on += (int64_t)a->count * (a->x1 - a->x0 + 1) * (a->y1 - a->y0 + 1) * (a->z1 - a->z0 + 1);
-    }
     return on;
 }
 
