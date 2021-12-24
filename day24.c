@@ -3,9 +3,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define MEMSIZE   256
-#define STACKSIZE  14
 #define REGCOUNT  ('z' - 'w' + 1)
+#define STACKSIZE 14
+#define MEMSIZE   256
 
 static const char *lang[] = {"nop", "inp", "add", "mul", "div", "mod", "eql"};
 typedef enum {
@@ -14,77 +14,75 @@ typedef enum {
 
 typedef struct {
     OpCode op;
-    int arg[2];
-    bool imm;
+    int    arg[2];
+    bool   reg;
 } Instr;
 
 typedef struct {
-    int ip, sp, reg[REGCOUNT], stack[STACKSIZE];
-    Instr mem[MEMSIZE];
-    bool run;
+    Instr *ip;
+    int   *sp;
+    int    reg[REGCOUNT];
+    int    stack[STACKSIZE];
+    Instr  mem[MEMSIZE];
 } VM;
 
-static VM alu = {0};
+static VM vm = {0};
 
-static bool run(VM *vm, int64_t model)
+static bool run(int64_t model)
 {
-    vm->sp = 0;
-    while (vm->sp < STACKSIZE) {
-        vm->stack[vm->sp++] = model % 9 + 1;
+    vm.sp = vm.stack;
+    for (int i = 0; i < STACKSIZE; ++i) {
+        *(vm.sp++) = model % 9 + 1;
         model /= 9;
     }
-    vm->run = true;
-    while (vm->run && vm->ip < MEMSIZE) {
-        Instr *i = &vm->mem[vm->ip++];
-        OpCode op = i->op;
-        int r = i->arg[0], val = i->arg[1];
-        if (op > INP && !i->imm && val >= 0 && val < REGCOUNT)
-            val = vm->reg[val];
-        switch (i->op) {
-            case NOP: vm->run = false; break;
-            case INP: vm->reg[r] = vm->sp ? vm->stack[--(vm->sp)] : 0; break;
-            case ADD: vm->reg[r] += val; break;
-            case MUL: vm->reg[r] *= val; break;
-            case DIV: vm->reg[r] /= val; break;
-            case MOD: vm->reg[r] %= val; break;
-            case EQL: vm->reg[r] = vm->reg[r] == val; break;
+    for (int i = 0; i < REGCOUNT; ++i)
+        vm.reg[i] = 0;
+    for (vm.ip = vm.mem;; vm.ip++) {
+        int r = vm.ip->arg[0], val = vm.ip->reg ? vm.reg[vm.ip->arg[1]] : vm.ip->arg[1];
+        switch (vm.ip->op) {
+            case NOP: return vm.reg['z' - 'w'] == 0;
+            case INP: vm.reg[r] = *--vm.sp; break;
+            case ADD: vm.reg[r] += val; break;
+            case MUL: vm.reg[r] *= val; break;
+            case DIV: vm.reg[r] /= val; break;
+            case MOD: vm.reg[r] %= val; break;
+            case EQL: vm.reg[r] = vm.reg[r] == val; break;
         }
     }
-    return vm->reg['z' - 'w'] == 0;
 }
 
 static int64_t model(int64_t base10)
 {
-    int64_t n = 0, d = 1;
+    static const int64_t dec[STACKSIZE] = {1,10,100,1000,10000,100000,1000000,10000000,100000000,1000000000,10000000000,100000000000,1000000000000,10000000000000};
+    int64_t n = 0;
     for (int i = 0; i < STACKSIZE; ++i) {
-        n += d * (base10 % 9 + 1);
+        n += dec[i] * (base10 % 9 + 1);
         base10 /= 9;
-        d *= 10;
     }
     return n;
 }
 
 static int64_t base10(int64_t model)
 {
-    int64_t n = 0, d = 1;
-    while (model) {
-        n += d * (model % 10 - 1);
+    static const int64_t non[STACKSIZE] = {1,9,81,729,6561,59049,531441,4782969,43046721,387420489,3486784401,31381059609,282429536481,2541865828329};
+    int64_t n = 0;
+    for (int i = 0; i < STACKSIZE; ++i) {
+        n += non[i] * (model % 10 - 1);
         model /= 10;
-        d *= 9;
     }
     return n;
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
     FILE *f = fopen("input24.txt", "r");
-    int c;
-    for (int ip = 0; ip < MEMSIZE && (c = fgetc(f)) != EOF; ++ip) {
+    int c, ip = 0;
+    for (; ip < MEMSIZE && (c = fgetc(f)) != EOF; ++ip) {
         printf("%d:", ip);
 
         OpCode op = NOP;
         int arg0 = 0, arg1 = 0;
-        bool imm = false;
+        bool reg = false;
 
         int d = fgetc(f);
         switch (c) {
@@ -102,14 +100,14 @@ int main(void)
             printf(" %c", arg0 + 'w');
 
             if ((c = fgetc(f)) == ' ') {  // there's more?
-                char buf[4] = {0};
-                buf[0] = (char)fgetc(f);
-                if (buf[0] >= 'w' && buf[0] <= 'z') {
-                    arg1 = buf[0] - 'w';
+                c = fgetc(f);
+                if (c >= 'w' && c <= 'z') {
+                    arg1 = c - 'w';
+                    reg = true;
                     printf(" %c", arg1 + 'w');
-                    fgetc(f);  // \n
-                } else if (buf[0] == '-' || (buf[0] >= '0' && buf[0] <= '9')) {
-                    imm = true;
+                    while ((c = fgetc(f)) != '\n');
+                } else if (c >= '-' && c <= '9') {
+                    char buf[4] = {(char)c};
                     int i = 1;
                     while ((c = fgetc(f)) != '\n')
                         buf[i++] = (char)c;
@@ -119,20 +117,31 @@ int main(void)
                 }
             }
         }
-        alu.mem[ip] = (Instr){op, {arg0, arg1}, imm};
+        vm.mem[ip] = (Instr){op, {arg0, arg1}, reg};
         printf("\n");
     }
     fclose(f);
-
-    int64_t maxmodel = 0;
-    for (int i = 0; i < STACKSIZE; ++i)
-        maxmodel = maxmodel * 10 + 9;
-    printf("%lld\n", maxmodel);
-    int64_t val = base10(maxmodel);
-    while (!run(&alu, val)) {
-        printf("%lld %lld\n", val, model(val));
-        --val;
+    if (ip < MEMSIZE) {
+        vm.mem[ip].op = NOP;
+        printf("%d: %s\n", ip, lang[NOP]);
     }
-    printf("Part 1: %lld\n", model(val));
+
+    int64_t minmodel = 0, maxmodel = 0;
+    for (int i = 0; i < STACKSIZE; ++i) {
+        minmodel = minmodel * 10 + 1;
+        maxmodel = maxmodel * 10 + 9;
+    }
+
+    if (argc > 1)
+        minmodel = atoll(argv[1]);
+    printf("min=%lld\nmax=%lld\n", minmodel, maxmodel);
+
+    // int64_t val = base10(maxmodel) + 1;
+    // while (!run(--val));
+    // printf("Part 1: %lld\n", model(val));
+
+    int64_t val = base10(minmodel) - 1;
+    while (!run(++val));
+    printf("Part 2: %lld\n", model(val));
     return 0;
 }
