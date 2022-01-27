@@ -4,7 +4,7 @@
 static char vent[1024][1024] = {0};
 int main(int argc, char *argv[])
 {
-    int part = argc > 1 ? *argv[1] - '0' : 0, multi = 0;
+    int part = argc > 1 && argv && argv[1] ? *argv[1] - '0' : 0, multi = 0;
     FILE *f = fopen("input05.txt", "r");
     for (int x, y, x1, y1; fscanf(f, "%d,%d -> %d,%d ", &x, &y, &x1, &y1) == 4; )
     {

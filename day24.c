@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
         maxmodel = maxmodel * 10 + 9;
     }
 
-    if (argc > 1)
+    if (argc > 1 && argv && argv[1])
         minmodel = atoll(argv[1]);
     printf("min=%lld\nmax=%lld\n", minmodel, maxmodel);
 
