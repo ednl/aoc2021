@@ -29,10 +29,10 @@ int main(void)
     while (i < DRAW && fscanf(f, ",%hhu", &a) == 1)
         draw[i++] = a;  // 99 more numbers drawn with a comma separator
 
-    unsigned char b = 0, r = 0, c = 0;
+    unsigned char b = 0, r = 0, c = 0;  // b = bingo card, r = row, c = column
     Index *p, *q;
-    while (b < CARD && fscanf(f, " %hhu", &a) == 1) {
-        // Fill the cards
+    while (b < CARD && fscanf(f, " %hhu", &a) == 1) {  // read next number with any whitespace separation
+        // Fill in the cards
         card[b][r][c] = a;
 
         // Enter a reference in the reverse index
